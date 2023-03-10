@@ -7,18 +7,18 @@ void setup() {
     int counter = 0;
     String Line;
     String readText="{\"sensor1\":\"10\",\"sensor2\":\"20\",\"voltage\":\"40\",\"current\":\"50\",\"sent\":\"no\"}";//for testing
+    byte index=0;
     Serial.println();
     for (int line = 0; line <= readText.length(); line++) {
           Line=readText[line];
-          for( int charac=0; charac<= readText.length();charac++){
+          for( int charac=0; charac<= Line.length();charac++){
           char c = Line[charac];
           
           if(c=='{')
           {
-          ++charac;
+          continue;
           }
-          
-          if (c == '"')
+          else if (c == '"')
           {
             counter++;
             continue;
@@ -27,12 +27,16 @@ void setup() {
           {
             
             //Serial.println("Number  is"+counter);
-            readLine[2]=readWord;
-            Serial.println("current word is"+readWord);
+            readLine[index]=(String)readWord;//losing the memory over here, its not remembering the number i guess
+            //Serial.println("current word is"+readWord);
             readWord="";
             counter=0;
+            index++;
           }
           else if(c==':'){
+            continue;
+          }
+          else if(c==','){
             continue;
           }
           else{
@@ -45,9 +49,11 @@ void setup() {
           }
           
      }
-     for (int i=0;i<=readLine->length();i++)
+     //Serial.println(readLine[0]);
+     
+     for (int i=0;i<=4;i++)
      {
-      Serial.println("New Array:"+readLine[i]);
+      Serial.println(readLine[i]);
      }
 }
         
