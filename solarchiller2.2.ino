@@ -46,29 +46,17 @@ void setup()
 }
 void loop()
 {
-    int count=0;
     ntp.update();
-  //Serial.println(ntp.formattedTime("%d %B %Y %T")); // dd. Mmm yyyy
+    //Serial.println(ntp.formattedTime("%d %B %Y %T")); // dd. Mmm yyyy
     String timestamp = ntp.formattedTime("%d %B %Y %A %T");
     if (client.connect(server, 80)) //Online mode
     {
-      Serial.println("connected...yeey :)");
-      //TODO:write to memory
-      
-      if(!SPIFFS.begin()){
-        Serial.println("An Error has occurred while mounting SPIFFS");
-        return;
-      }
-      File f = SPIFFS.open("doc", "w");
-    /*
-    doc["C1"]=20;
-    doc["C2"]=30;
-    doc["C3"]=40;
-    doc["C4"]=10;
-    doc["V1"]=90;
-    doc["T1"]=80;
-    doc["T2"]=70;*/
-    //break; //if left in, we'll just read the first line then break out of the while.
+    Serial.println("connected...yeey :)");
+    if(!SPIFFS.begin()){
+      Serial.println("An Error has occurred while mounting SPIFFS");
+      return;
+    }
+    File f = SPIFFS.open("/log.txt", "a");     
     double adcVol = 3.33/256 ; 
     double reading = analogRead(A0);
     double sensor1= adcVol * reading;
@@ -77,29 +65,29 @@ void loop()
     double volt2= 4* sensor1;
     double cur1= 5* sensor1;
     double cur2= 6* sensor1;
-      Serial.println("Reading is "+String(reading));
-      doc[count]["C1"]=cur1;
-      doc[count]["C2"]=cur2;
-      doc[count]["T1"]=sensor1;
-      doc[count]["T2"]=sensor2;
-      doc[count]["V1"]=volt1;
-      doc[count]["V2"]=volt2;
-      doc[count]["timestamp"]=timestamp;
-      doc[count]["status"]="sent";
-     String body = "field1=";
-     body += String(sensor1);
-     body += "&field2=";// for multiple fields
-     body += String(sensor2);
-     body += "&field3=";// for multiple fields
-     body += String(volt1);
-     body += "&field4=";// for multiple fields
-     body += String(volt2);
-     body += "&field5=";// for multiple fields
-     body += String(cur1);
-     body += "&field6=";// for multiple fields
-     body += String(cur2);
-     f.print(body);
-     f.close();
+    doc[timestamp]["C1"]=cur1;
+    doc[timestamp]["C2"]=cur2;
+    doc[timestamp]["T1"]=sensor1;
+    doc[timestamp]["T2"]=sensor2;
+    doc[timestamp]["V1"]=volt1;
+    doc[timestamp]["V2"]=volt2;
+    doc[timestamp]["status"]="sent";
+    //serializeJson(doc,f);
+    
+   String body = "field1=";
+   body += String(sensor1);
+   body += "&field2=";// for multiple fields
+   body += String(sensor2);
+   body += "&field3=";// for multiple fields
+   body += String(volt1);
+   body += "&field4=";// for multiple fields
+   body += String(volt2);
+   body += "&field5=";// for multiple fields
+   body += String(cur1);
+   body += "&field6=";// for multiple fields
+   body += String(cur2);
+   f.println(body);
+   f.close();
     client.print("POST /update HTTP/1.1\n");
     client.print("Host: api.thingspeak.com\n");
     client.print("Connection: close\n");
@@ -111,36 +99,31 @@ void loop()
     client.print(body);
     client.print("\n\n");
     client.stop();
-    File f2 = SPIFFS.open("doc", "r");//read and send the values which were not sent by checking timestamp
+    File f2 = SPIFFS.open("/log.txt", "a+");
       if (!f2) {
-      Serial.println("Count file open failed on read.");
+      Serial.println("Log file open failed on read.");// file with counter or data
       } else {
-      //while(f2.available()) {
-        //Lets read line by line from the file
-        for(int i=0;i<f2.size();i++)
-          {
-          //String line = f2.readStringUntil('\n');
-          //Serial.prinln(line);
-          Serial.print((char)f2.read());
-          }
-        
-        //Serial.println(line);
+      Serial.println(f2.size());
+      for(int i=0;i<f2.size();i++)
+      {
+      //Serial.print((char)f2.read());
+      }
     // Test if parsing succeeds.
     /*
-    DeserializationError error = deserializeJson(doc2, f2);
+    DeserializationError error = deserializeJson(log, f2);
       if (error) {
         Serial.print(F("deserializeJson() failed: "));
         Serial.println(error.f_str());
         return;
       }
       */
-      double sensor1= doc["T1"];
-      double sensor2= doc["T2"];
-      double volt1= doc["V1"];
-      double volt2= doc["V2"];
-      double cur1= doc["C1"];
-      double cur2= doc["C2"];
-      serializeJson(doc,Serial);
+      double sensor1= doc[timestamp]["T1"];
+      double sensor2= doc[timestamp]["T2"];
+      double volt1= doc[timestamp]["V1"];
+      double volt2= doc[timestamp]["V2"];
+      double cur1= doc[timestamp]["C1"];
+      double cur2= doc[timestamp]["C2"];
+      
       String body = "field1=";
        body += String(sensor1);
        body += "&field2=";// for multiple fields
@@ -156,6 +139,8 @@ void loop()
     
   
   }
+  Serial.flush();
+  
     }
   else //Offline mode
   {
@@ -164,7 +149,7 @@ void loop()
       Serial.println("An Error has occurred while mounting SPIFFS");
       return;
     }
-    File f = SPIFFS.open("doc", "w"); 
+    File f = SPIFFS.open("/log.txt", "w"); 
     
     //TODO:: Loop through json document(check for values which are not sent to server) and for every cycle convert values and store them
       Serial.println("Adding to file");
@@ -179,14 +164,13 @@ void loop()
       double cur1= 5* sensor1;
       double cur2= 6* sensor1;
       //TODO::send data to cloud if its not sent, need to do the same on the server
-      doc[count]["C1"]=cur1;
-      doc[count]["C2"]=cur2;
-      doc[count]["T1"]=sensor1;
-      doc[count]["T2"]=sensor2;
-      doc[count]["V1"]=volt1;
-      doc[count]["V2"]=volt2;
-      doc[count]["timestamp"]=timestamp;
-      doc[count]["status"]="not sent";
+      doc[timestamp]["C1"]=cur1;
+      doc[timestamp]["C2"]=cur2;
+      doc[timestamp]["T1"]=sensor1;
+      doc[timestamp]["T2"]=sensor2;
+      doc[timestamp]["V1"]=volt1;
+      doc[timestamp]["V2"]=volt2;
+      doc[timestamp]["status"]="not sent";
       if (!f) {
       Serial.println("Count file open failed on update.");
         } else { 
@@ -196,5 +180,4 @@ void loop()
           f.close(); 
     }
   delay(11000);
-  count++;
 }
