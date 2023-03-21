@@ -10,4 +10,4 @@ Hardware used-
 
 Use the latest versiom of code to be uploaded to board. Latest version is 2.2 which doesn't have support for SD card.
 
-Credits: The first versions of this code was made for Mr. Satheesh Telagamasetti, SOULS org., IIT Bombay. I am thankful for his vision in providing this device.
+Credits: The first versions of this code was made for Mr. Satheesh Telagamasetti, SOULS org., IIT Bombay. I am thankful for his vision of this device.
