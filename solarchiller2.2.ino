@@ -12,14 +12,18 @@
 #include <Wire.h>
 #include <DNSServer.h> 
 #include <WiFiManager.h>          //https://github.com/tzapu/WiFiManager
+#include "DHTesp.h"
 #define D 5
 #include "FS.h" //FS was added from before
 #include "WiFiUdp.h"
 #include "NTP.h"
+#include <Arduino.h>
+#include <U8x8lib.h>
+#include <Wire.h>
+DHTesp dht;
 WiFiUDP wifiUdp;
 NTP ntp(wifiUdp);
 DynamicJsonDocument doc(512);
-DynamicJsonDocument doc2(1024);
 // Wi-Fi Settings
 const char* ssid = "vivo-1901"; //your wireless network name (SSID)
 const char* password = "alex7210";
@@ -28,6 +32,7 @@ const int channelID = 2049316;
 String writeAPIKey = "LOX7D0GNL4PI64FW"; // write API key for your ThingSpeak Channel
 const char* server = "api.thingspeak.com";
 const int postingInterval = 15000 ; // post data every 15 seconds
+U8X8_SSD1306_128X64_NONAME_HW_I2C u8x8(/* reset=*/ U8X8_PIN_NONE); //oled lib constt
 void setup()
 { 
   pinMode(A0, INPUT);
@@ -42,11 +47,27 @@ void setup()
   ntp.ruleDST("IST", Last, Sun, Mar, 2, 120); // last sunday in march 2:00, timetone +120min (+1 GMT + 1h summertime offset)
   //ntp.ruleSTD("CET", Last, Sun, Oct, 3, 60); // last sunday in october 3:00, timezone +60min (+1 GMT)
   ntp.begin();
+  u8x8.begin();
+  u8x8.clear();
+  u8x8.setFlipMode(1);
+  dht.setup(16, DHTesp::DHT11);
   }
 }
+void pre(void)
+{
+  u8x8.setFont(u8x8_font_amstrad_cpc_extended_f);    
+  u8x8.clear();
+
+  u8x8.inverse();
+  u8x8.setFont(u8x8_font_chroma48medium8_r);  
+  u8x8.noInverse();
+  u8x8.setCursor(0,1);
+}
+
 void loop()
 {
     ntp.update();
+    //uint8_t c, r, d; //variables of u8x8 lib
     //Serial.println(ntp.formattedTime("%d %B %Y %T")); // dd. Mmm yyyy
     String timestamp = ntp.formattedTime("%d %B %Y %A %T");
     if (client.connect(server, 80)) //Online mode
@@ -65,6 +86,31 @@ void loop()
     double volt2= 4* sensor1;
     double cur1= 5* sensor1;
     double cur2= 6* sensor1;
+    pre();
+    //u8x8.drawString(0, 1, "3x6 Font");
+    u8x8.setFont(u8x8_font_chroma48medium8_r);
+    u8x8.setInverseFont(1);
+    u8x8.setCursor(0,1);
+    //u8x8.drawGlyph(0,2, '@'+c);
+    //u8x8.setCursor(0,4);
+    u8x8.print(0);
+    u8x8.drawString(1,1,"Temperature:");
+    
+    u8x8.setCursor(0,2);
+    u8x8.print(0);
+    u8x8.drawString(1,2,"Humidity:");
+   
+    u8x8.drawString(1,3,"Voltage:");
+    u8x8.setCursor(0,3);
+    u8x8.print(0);
+    //u8x8.print(volt1);
+    
+    u8x8.setCursor(1,4);
+    u8x8.print(0);
+    //u8x8.print(sensor1);
+    u8x8.setCursor(1,5);
+    u8x8.print(0);
+   // u8x8.print(sensor1);
     doc[timestamp]["C1"]=cur1;
     doc[timestamp]["C2"]=cur2;
     doc[timestamp]["T1"]=sensor1;
@@ -104,6 +150,9 @@ void loop()
       Serial.println("Log file open failed on read.");// file with counter or data
       } else {
       Serial.println(f2.size());
+      if(f2.size()>=3000000){
+        SPIFFS.format();
+      }
       for(int i=0;i<f2.size();i++)
       {
       //Serial.print((char)f2.read());
@@ -149,7 +198,7 @@ void loop()
       Serial.println("An Error has occurred while mounting SPIFFS");
       return;
     }
-    File f = SPIFFS.open("/log.txt", "w"); 
+    File f = SPIFFS.open("/log.txt", "a+"); 
     
     //TODO:: Loop through json document(check for values which are not sent to server) and for every cycle convert values and store them
       Serial.println("Adding to file");
